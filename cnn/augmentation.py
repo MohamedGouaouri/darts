@@ -6,38 +6,38 @@ from torch.autograd import Variable
 from genotypes import Genotype
 from model_search import Network as ModelNetwork
 from kornia.augmentation import *
-
+from operations import FactorizedReduce, ReLUConvBN
 
 
 DA_2D_PRIMITIVES = [
     'none',
-    'blur',
+    # 'blur',
     'invert',
     'hflip',
     'vflip',
-    'crop',
-    'rotate',
+    # 'crop',
+    # 'rotate',
 ]
 
 
 # TODO: Implement augmentation operators
 DA_2D_OPS = {
-  'none' : lambda *args, **kwargs: Identity(),
-  'blur' : lambda p: RandomBoxBlur(p=p), # p is proba
-  'invert' : lambda p: RandomInvert(p=p),
+  'none' : lambda *args,: Identity(),
+  'blur' : lambda p: RandomBoxBlur(p=p, keepdim=True), # p is proba
+  'invert' : lambda p: RandomInvert(p=p, keepdim=True),
   'hflip' : lambda p: RandomHorizontalFlip(p=p),
   'vflip' : lambda p: RandomVerticalFlip(p=p),
-  'crop' : lambda p: RandomCrop(p=p),
-  'rotate': lambda p: RandomRotation(p=p),
+  # 'crop' : lambda p: RandomCrop(p=p),
+  # 'rotate': lambda degrees: RandomRotation(p=p),
 }
 
 class DAMixedOp(nn.Module):
 
-  def __init__(self, params):
+  def __init__(self, p):
     super(DAMixedOp, self).__init__()
     self._ops = nn.ModuleList()
     for primitive in DA_2D_PRIMITIVES:
-      op = DA_2D_OPS[primitive](params)
+      op = DA_2D_OPS[primitive](p)
       self._ops.append(op)
 
   def forward(self, x, weights):
@@ -45,10 +45,12 @@ class DAMixedOp(nn.Module):
 
 class DACell(nn.Module):
 
-  def __init__(self, steps, multiplier, C_prev_prev, C_prev, C, reduction):
+  def __init__(self, steps, multiplier, C_prev_prev, C_prev, C, reduction, reduction_prev, p):
     super(DACell, self).__init__()
     self.reduction = reduction
 
+    self.preprocess0 = ReLUConvBN(C_prev_prev, C, 1, 1, 0, affine=False)
+    self.preprocess1 = ReLUConvBN(C_prev, C, 1, 1, 0, affine=False)
     self._steps = steps
     self._multiplier = multiplier
 
@@ -57,14 +59,19 @@ class DACell(nn.Module):
       # For each step i, there are 2 + i incoming edges
       # Each incoming edge is an operation (a MixedOp instance).
       for j in range(2+i):
-        stride = 2 if reduction and j < 2 else 1
-        op = DAMixedOp(C, stride)
+        # stride = 2 if reduction and j < 2 else 1
+        op = DAMixedOp(p)
         self._ops.append(op)
 
   def forward(self, s0, s1, weights):
+    s0 = self.preprocess0(s0)
+    s1 = self.preprocess1(s1)
     states = [s0, s1]
     offset = 0
     for i in range(self._steps):
+      # for j, h in enumerate(states):
+      #   print(f'Ops out: {self._ops[offset+j](h, weights[offset+j]).size()} h size: {h.size()}')
+      # print('============================================================')
       s = sum(self._ops[offset+j](h, weights[offset+j]) for j, h in enumerate(states))
       offset += len(states)
       states.append(s)
@@ -74,29 +81,33 @@ class DACell(nn.Module):
 
 class DANetwork(nn.Module):
 
-  def __init__(self, C, layers, criterion, steps=4, multiplier=4, stem_multiplier=3):
+  def __init__(self, C, layers, criterion, steps=4, multiplier=4, stem_multiplier=3, p=0.5):
     super(DANetwork, self).__init__()
     self._C = C
     self._layers = layers
     self._criterion = criterion
     self._steps = steps
     self._multiplier = multiplier
+    self._p = p
 
     C_curr = stem_multiplier*C
+    
     self.stem = nn.Sequential(
-      # nn.Conv2d(3, C_curr, 3, padding=1, bias=False),
+      nn.Conv2d(3, C_curr, 3, padding=1, bias=False),
       nn.BatchNorm2d(C_curr)
     )
- 
+    self.conv = nn.Conv2d(in_channels=256, out_channels=3, kernel_size=3, stride=1, padding=1)
     C_prev_prev, C_prev, C_curr = C_curr, C_curr, C
     self.cells = nn.ModuleList()
+    reduction_prev = False
     for i in range(layers):
       if i in [layers//3, 2*layers//3]:
         C_curr *= 2
         reduction = True
       else:
         reduction = False
-      cell = DACell(steps, multiplier, C_prev_prev, C_prev, C_curr, reduction)
+      cell = DACell(steps, multiplier, C_prev_prev, C_prev, C_curr, reduction, reduction_prev, self._p)
+      reduction_prev = reduction
       self.cells += [cell]
       C_prev_prev, C_prev = C_prev, multiplier*C_curr
 
@@ -111,7 +122,7 @@ class DANetwork(nn.Module):
       else:
         weights = F.softmax(self.alphas_normal, dim=-1)
       s0, s1 = s1, cell(s0, s1, weights)
-    return s1
+    return self.conv(s1)
 
 
   def _initialize_alphas(self):
@@ -125,6 +136,10 @@ class DANetwork(nn.Module):
       self.alphas_reduce,
     ]
 
+  def _loss(self, input, target):
+    logits = self(input)
+    return self._criterion(logits, target) 
+  
   def arch_parameters(self):
     return self._arch_parameters
 
@@ -163,7 +178,8 @@ class UnifiedNetwork(nn.Module):
 
     def __init__(
         self,
-        C, 
+        C,
+        num_classes,
         layers, 
         criterion, 
         steps=4, 
@@ -175,7 +191,7 @@ class UnifiedNetwork(nn.Module):
 
         self.augmentation = DANetwork(
           C, 
-          layers, 
+          layers,
           criterion, 
           steps=steps, 
           multiplier=multiplier, 
@@ -184,7 +200,8 @@ class UnifiedNetwork(nn.Module):
         )
         
         self.network = ModelNetwork(
-          C, 
+          C,
+          num_classes,
           layers, 
           criterion, 
           steps=steps, 
@@ -202,3 +219,7 @@ class UnifiedNetwork(nn.Module):
     def arch_parameters(self):
         return self.augmentation.arch_parameters() + self.network.arch_parameters()
     
+    def _loss(self, input, target):
+      # r = torch.mean(torch.tensor([self.augmentation._loss(input, target), self.network._loss(input, target)]))
+      
+      return self.network._loss(input, target)
