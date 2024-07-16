@@ -57,7 +57,7 @@ DA_2D_OPS = {
   
   
   'blur_p0' : lambda *args: RandomBoxBlur(p=0, keepdim=True),
-  'blur_p0.2' : lambda *args: RandomBoxBlur(p=0.3, keepdim=True),
+  'blur_p0.2' : lambda *args: RandomBoxBlur(p=0.2, keepdim=True),
   'blur_p0.4' : lambda *args: RandomBoxBlur(p=0.4, keepdim=True),
   'blur_p0.6' : lambda *args: RandomBoxBlur(p=0.6, keepdim=True),
   'blur_p0.8' : lambda *args: RandomBoxBlur(p=0.8, keepdim=True),
