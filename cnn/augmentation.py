@@ -1,4 +1,4 @@
-from operations import Identity
+from operations import Identity, Zero
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,6 +11,8 @@ from operations import FactorizedReduce, ReLUConvBN
 
 DA_2D_PRIMITIVES = [
     'none',
+    
+    'identity',
     
     'blur_p0',
     'blur_p0.2',
@@ -49,7 +51,10 @@ DA_2D_PRIMITIVES = [
 
 # TODO: Implement augmentation operators
 DA_2D_OPS = {
-  'none' : lambda *args,: Identity(),
+  'none' : lambda *args,: Zero(stride=1),
+  
+  'identity' : lambda *args,: Identity(),
+  
   
   'blur_p0' : lambda *args: RandomBoxBlur(p=0, keepdim=True),
   'blur_p0.2' : lambda *args: RandomBoxBlur(p=0.3, keepdim=True),
