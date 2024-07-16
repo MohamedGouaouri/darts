@@ -22,6 +22,7 @@ DA_2D_PRIMITIVES = [
     
     'invert_p0',
     'invert_p0.2',
+    'invert_p0.4',
     'invert_p0.6',
     'invert_p0.8',
     
