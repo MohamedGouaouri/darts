@@ -86,6 +86,7 @@ DA_2D_OPS = {
   'rotate_180': lambda *args: RandomRotation(degrees=180.0, keepdim=True,),
   'rotate_225': lambda *args: RandomRotation(degrees=225.0, keepdim=True,),
   'rotate_270': lambda *args: RandomRotation(degrees=270, keepdim=True,),
+  'rotate_315': lambda *args: RandomRotation(degrees=315, keepdim=True,),
   
 }
 
