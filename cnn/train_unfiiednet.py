@@ -14,9 +14,8 @@ import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
 
 from torch.autograd import Variable
-from model_search import Network
 from architect import Architect
-from cnn.augmentation import UnifiedNetwork
+from augmentation import UnifiedNetwork
 
 
 parser = argparse.ArgumentParser("cifar")

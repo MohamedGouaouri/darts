@@ -11,24 +11,82 @@ from operations import FactorizedReduce, ReLUConvBN
 
 DA_2D_PRIMITIVES = [
     'none',
-    # 'blur',
-    'invert',
-    'hflip',
-    'vflip',
+    
+    'blur_p0',
+    'blur_p0.2',
+    'blur_p0.4',
+    'blur_p0.6',
+    'blur_p0.8',
+    
+    'invert_p0',
+    'invert_p0.2',
+    'invert_p0.6',
+    'invert_p0.8',
+    
+    'hflip_p0',
+    'hflip_p0.2',
+    'hflip_p0.4',
+    'hflip_p0.6',
+    'hflip_p0.8',
+  
+    'vflip_p0',
+    'vflip_p0.2',
+    'vflip_p0.4',
+    'vflip_p0.6',
+    'vflip_p0.8',
+    
     # 'crop',
-    # 'rotate',
+    'rotate_0',
+    'rotate_45',
+    'rotate_90',
+    'rotate_135',
+    'rotate_180',
+    'rotate_225',
+    'rotate_270',
+    
 ]
 
 
 # TODO: Implement augmentation operators
 DA_2D_OPS = {
   'none' : lambda *args,: Identity(),
-  'blur' : lambda p: RandomBoxBlur(p=p, keepdim=True), # p is proba
-  'invert' : lambda p: RandomInvert(p=p, keepdim=True),
-  'hflip' : lambda p: RandomHorizontalFlip(p=p),
-  'vflip' : lambda p: RandomVerticalFlip(p=p),
+  
+  'blur_p0' : lambda *args: RandomBoxBlur(p=0, keepdim=True),
+  'blur_p0.2' : lambda *args: RandomBoxBlur(p=0.3, keepdim=True),
+  'blur_p0.4' : lambda *args: RandomBoxBlur(p=0.4, keepdim=True),
+  'blur_p0.6' : lambda *args: RandomBoxBlur(p=0.6, keepdim=True),
+  'blur_p0.8' : lambda *args: RandomBoxBlur(p=0.8, keepdim=True),
+  
+  'invert_p0' : lambda *args: RandomInvert(p=0, keepdim=True),
+  'invert_p0.2' : lambda *args: RandomInvert(p=0.2, keepdim=True),
+  'invert_p0.4' : lambda *args: RandomInvert(p=0.4, keepdim=True),
+  'invert_p0.6' : lambda *args: RandomInvert(p=0.6, keepdim=True),
+  'invert_p0.8' : lambda *args: RandomInvert(p=0.8, keepdim=True),
+  
+  
+  'hflip_p0' : lambda *args: RandomHorizontalFlip(p=0, keepdim=True,),
+  'hflip_p0.2' : lambda *args: RandomHorizontalFlip(p=0.2, keepdim=True,),
+  'hflip_p0.4' : lambda *args: RandomHorizontalFlip(p=0.4, keepdim=True,),
+  'hflip_p0.6' : lambda *args: RandomHorizontalFlip(p=0.6, keepdim=True,),
+  'hflip_p0.8' : lambda *args: RandomHorizontalFlip(p=0.8, keepdim=True,),
+  
+  
+  'vflip_p0' : lambda *args: RandomVerticalFlip(p=0, keepdim=True,),
+  'vflip_p0.2' : lambda *args: RandomVerticalFlip(p=0.2, keepdim=True,),
+  'vflip_p0.4' : lambda *args: RandomVerticalFlip(p=0.4, keepdim=True,),
+  'vflip_p0.6' : lambda *args: RandomVerticalFlip(p=0.6, keepdim=True,),
+  'vflip_p0.8' : lambda *args: RandomVerticalFlip(p=0.8, keepdim=True,),
+  
+  
   # 'crop' : lambda p: RandomCrop(p=p),
-  # 'rotate': lambda degrees: RandomRotation(p=p),
+  'rotate_0': lambda *args: RandomRotation(degrees=0, keepdim=True,),
+  'rotate_45': lambda *args: RandomRotation(degrees=45.0, keepdim=True,),
+  'rotate_90': lambda *args: RandomRotation(degrees=90.0, keepdim=True,),
+  'rotate_135': lambda *args: RandomRotation(degrees=135.0, keepdim=True,),
+  'rotate_180': lambda *args: RandomRotation(degrees=180.0, keepdim=True,),
+  'rotate_225': lambda *args: RandomRotation(degrees=225.0, keepdim=True,),
+  'rotate_270': lambda *args: RandomRotation(degrees=270, keepdim=True,),
+  
 }
 
 class DAMixedOp(nn.Module):

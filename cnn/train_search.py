@@ -16,7 +16,6 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from model_search import Network
 from architect import Architect
-from cnn.augmentation import UnifiedNetwork
 
 
 parser = argparse.ArgumentParser("cifar")
@@ -74,8 +73,7 @@ def main():
 
   criterion = nn.CrossEntropyLoss()
   criterion = criterion.cuda()
-  # TODO: Pass augmentation params
-  model = UnifiedNetwork(args.init_channels, CIFAR_CLASSES, args.layers, criterion)
+  model = Network(args.init_channels, CIFAR_CLASSES, args.layers, criterion)
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
@@ -114,9 +112,6 @@ def main():
 
     genotype = model.genotype()
     logging.info('genotype = %s', genotype)
-
-    print(F.softmax(model.alphas_normal, dim=-1))
-    print(F.softmax(model.alphas_reduce, dim=-1))
 
     # training
     train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr)
