@@ -35,7 +35,36 @@ def accuracy(output, target, topk=(1,)):
     correct_k = correct[:k].reshape(-1, 1).float().sum(0)
     res.append(correct_k.mul_(100.0/batch_size))
   return res
+def f1_score_at_k(output, target, num_classes, topk=(1,)):
+    maxk = max(topk)
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
 
+    f1_scores = []
+
+    for k in topk:
+        preds = pred[:k].reshape(-1, 1).float()
+        tp = torch.zeros(num_classes, dtype=torch.float)
+        fp = torch.zeros(num_classes, dtype=torch.float)
+        fn = torch.zeros(num_classes, dtype=torch.float)
+
+        for cls in range(num_classes):
+            tp[cls] = ((preds == cls) & (target == cls)).sum().item()
+            fp[cls] = ((preds == cls) & (target != cls)).sum().item()
+            fn[cls] = ((preds != cls) & (target == cls)).sum().item()
+
+        precision = tp / (tp + fp + 1e-10)  # Add eps to avoid division by zero
+        recall = tp / (tp + fn + 1e-10)
+
+        f1 = 2 * (precision * recall) / (precision + recall + 1e-10)
+
+        # Average F1 Score across all classes
+        avg_f1 = f1.mean().item()
+
+        f1_scores.append(avg_f1 * 100.0)
+    
+    return f1_scores
+  
 
 class Cutout(object):
     def __init__(self, length):

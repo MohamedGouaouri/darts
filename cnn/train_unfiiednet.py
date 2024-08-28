@@ -118,11 +118,11 @@ def main():
     # print(F.softmax(model.alphas_reduce, dim=-1))
 
     # training
-    train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr)
+    train_acc, train_obj, train_f1 = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr)
     logging.info('train_acc %f', train_acc)
 
     # validation
-    valid_acc, valid_obj = infer(valid_queue, model, criterion)
+    valid_acc, valid_obj, valid_f1 = infer(valid_queue, model, criterion)
     logging.info('valid_acc %f', valid_acc)
 
     utils.save(model, os.path.join(args.save, 'weights.pt'))
@@ -132,6 +132,8 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
   objs = utils.AvgrageMeter()
   top1 = utils.AvgrageMeter()
   top5 = utils.AvgrageMeter()
+  
+  f1_1 = utils.AvgrageMeter()
 
   for step, (input, target) in enumerate(train_queue):
     model.train()
@@ -156,20 +158,26 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
     optimizer.step()
 
     prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+    f1_at_1 = utils.f1_score(logits, target, CIFAR_CLASSES, )
+    
     objs.update(loss.item(), n)
     top1.update(prec1.item(), n)
     top5.update(prec5.item(), n)
+    f1_1.update(f1_at_1, n)
 
     if step % args.report_freq == 0:
-      logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+      logging.info('Train step: %03d, loss: %e, acc@1: %f,  acc@5: %f, f1@1: %f', step, objs.avg, top1.avg, top5.avg, f1_1.avg)
 
-  return top1.avg, objs.avg
+  return top1.avg, objs.avg, f1_1.avg
 
 
 def infer(valid_queue, model, criterion):
   objs = utils.AvgrageMeter()
   top1 = utils.AvgrageMeter()
   top5 = utils.AvgrageMeter()
+  
+  f1_1 = utils.AvgrageMeter()
+  
   model.eval()
 
   for step, (input, target) in enumerate(valid_queue):
@@ -180,15 +188,18 @@ def infer(valid_queue, model, criterion):
     loss = criterion(logits, target)
 
     prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+    f1_at_1 = utils.f1_score(logits, target, CIFAR_CLASSES, )
     n = input.size(0)
     objs.update(loss.item(), n)
     top1.update(prec1.item(), n)
     top5.update(prec5.item(), n)
+    
+    f1_1.update(f1_at_1, n)
 
     if step % args.report_freq == 0:
-      logging.info('valid %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+      logging.info('Valid step: %03d, loss: %e, acc@1: %f,  acc@5: %f, f1@1: %f', step, objs.avg, top1.avg, top5.avg, f1_1.avg)
 
-  return top1.avg, objs.avg
+  return top1.avg, objs.avg, f1_1.avg
 
 
 if __name__ == '__main__':
